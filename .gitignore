@@ -1,5 +1,104 @@
 # History files
 .Rhistory
+# created on 2012.11.17
+# contact zhaoyu@lreis.ac.cn; humg@lreis.ac.cn
 
+# user setting
+setwd("E:/Khaki/SYA/LREIS/SPAmodelValidation/Validation")
+EpbStationPath <- "Oct2012_18Surveillance_PM10.csv"  #reference data file
+USStationPath <- "TotalDatePM25_201210.csv"  #sample data file
+XchangeEpbStationPath <- "Oct2012_18Surveillance_PM25.csv"
+#需要改
+SaveResultPath0 <- "result.csv"		#result file
+
+
+
+epbStations0 <- read.csv(EpbStationPath)
+XchangeEpbStation0 <- read.csv(XchangeEpbStationPath)
+#i <- "wsxg"
+RESULT <- as.data.frame(as.matrix(rep(0,31),31:1))
+for(i in names(epbStations0[,2:ncol(epbStations0)])) {
+  
+
+
+SaveResultPath <- paste(i,"_result.csv",sep="")
+select <- setdiff(names(epbStations0),i)
+epbStations <- subset(epbStations0,select=select)
+select <- c("Date",i)
+USStation <- subset(XchangeEpbStation0,select=select)
+
+funcSPA <- function(epbStations,USStation){
+  # SPA model
+  SPA <- function()
+  {  		
+    epbData <- epbStations[,-1]
+    USData <- USStation[,-1]
+    PMdata <- cbind(USData,epbData)
+    
+    CovValue <- cov(PMdata)
+    N <- nrow(CovValue)
+    mLeft <- matrix(nrow=N, ncol=N)
+    mLeft[1:N,1:N] <- CovValue	
+    mLeft <- rbind(mLeft, c(0,rep(1,N-1)))	# last row
+    mLeft <- cbind(mLeft, c(0,rep(1,N-1),0))# last column
+    
+    # solve a linear equation
+    param <- solve(mLeft, c(rep(0,N), 1))
+    w0 <- -param[1]
+    gi <- param[2:(N)]
+    mu <- param[N+1]
+    
+    #estimate variance
+    n <- ncol(CovValue)
+    CovepbData <- cov(epbData)
+    g <- as.matrix(gi)
+    it1 <- w0^2 * CovValue[1,1]
+    it2 <- 2*w0*sum(g*CovValue[1,c(2:n)])
+    it3 <- sum(g%*%t(g) * CovepbData)
+    v <- list(it1=it1, it2=it2, it3=it3)
+    
+    return(list(Cw0= round(w0,2),V=v))
+  }
+  
+  Main <- function(TotalDay)
+  {
+    x0 <- USStation[,2]  #value of the single station
+    
+    SPAResult <- SPA()
+    #estimated mean
+    X <- round((SPAResult$Cw0) * x0,2)
+    #variance
+    r0 <- x0/mean(x0)
+    r1 <- rowMeans(epbStations[,-1])/mean(rowMeans(epbStations[,-1]))
+    V <- r0^2*SPAResult$V$it1 - r0*r1*SPAResult$V$it2 + r1^2*SPAResult$V$it3
+    Std <- round(sqrt(V),2)
+    #confidence interval
+    CI1 <- round(X-Std,2)
+    CI2 <- round(X+Std,2)
+    
+    dfAmb <- data.frame(Date = USStation[,1],Estimation = X,w0 = SPAResult$Cw0,STDEV = Std,CI1=CI1,CI2=CI2,stringsAsFactors=F)
+    
+    return(dfAmb)
+  }
+} 
+
+funcSPA(epbStations,USStation)
+
+tryCatch(
+{
+  dfResult <- Main()
+  fsave <- SaveResultPath
+  write.csv(dfResult,fsave,row.names=F)
+},
+error=function(e) 
+{
+  print(e)
+}
+  )
+
+RESULT <- cbind(RESULT,dfResult[,2])
+}
+names(RESULT) <- c("",names(epbStations0[,2:ncol(epbStations0)]))
+write.csv(RESULT,"PM25ArealEstimationResult.csv",row.names=F)
 # Example code in package build process
 *-Ex.R
