@@ -1,0 +1,125 @@
+# created on 2013-03-11
+# contact lucyzhr@hotmail.com
+
+#First of all, please run the SPA model code in line 70-123 around
+
+# user setting
+setwd("F:/Khaki/SPAValidation/Calc.SPA")
+EpbStationPath <- "stationPM10_201210_12.csv"  #reference data file(PM10) 
+XchangeEpbStationPath <- "stationPM2.5_201210_12.csv"#sample data file(PM2.5)
+length <- 20 #state the length of the days in each estimation process
+EpbStations0 <- read.csv(EpbStationPath)
+XchangeEpbStation0 <- read.csv(XchangeEpbStationPath)
+
+if (nrow(EpbStations0) != nrow(XchangeEpbStation0)){print("nrow(PM10) != nrow(PM10)")}
+#the # of groups
+groupN <- as.integer(nrow(XchangeEpbStation0)/length); EpbStationsLines <- XchangeEpbStationLines <- groupLengthAll <- rep(0,groupN)
+for (group in 1:groupN) {
+  if (group<groupN) {
+    groupLengthAll[group] <- length
+  }else{
+    groupLengthAll[group] <- nrow(XchangeEpbStation0)-(group-1)*length
+  }
+}
+#Begin the loop of validation; For every PM2.5 Station, save a SPA Estimation file
+for (station in names(XchangeEpbStation0)[-1]) {
+  SaveResultPath <- paste(station,"_","w0blnk","_",length,"d_result.csv",sep="")
+  select <- setdiff(names(EpbStations0)[-1],station) #Delete the PM2.5 Station, in PM10 Observation matrix
+  EpbStations1 <- subset(EpbStations0,select=select)
+  RESULT <- as.data.frame(matrix(rep(0,6),1,6))#Attention: the 1st row of RESULT is blank, so this line will be delete before saving a result file
+  names(RESULT) <- c("Date","Estimation","w0","STDEV","CI1","CI2")
+  #Divide the time series into groups of "length" <- a variable; Run SPA Estimation in each Group; To estimate the best length
+  for (group in 1:groupN) {
+    currentGroupLines <- seq(sum(groupLengthAll[0:(group-1)])+1,sum(groupLengthAll[0:(group)]))
+    currentXchange <- XchangeEpbStation0[currentGroupLines,station]
+    subXchangeLines <- which(currentXchange==0);currentBlankXchangeLines <- subXchangeLines+length*(group-1)
+    if (length(subXchangeLines)!=0) {
+      currentGroupLines <- setdiff(currentGroupLines,currentBlankXchangeLines)
+      currentXchange <- currentXchange[-subXchangeLines]
+    }
+    #Longer than the the PM10 Station number, to prevent the Singular Matrix 
+    if (length(currentXchange)>16) {
+      currentEpb <- EpbStations1[currentGroupLines,]
+      for (Epb in names(EpbStations1)) {
+        subEpbLines <- which(currentEpb[,Epb]==0)
+        currentBlankEpbLines <- subEpbLines+15*(group-1)
+        if (length(currentBlankEpbLines)>0) { #length()=x could be changed for strict or not
+          sel.Epb <- setdiff(names(currentEpb),Epb)
+          currentEpb <- subset(currentEpb,select=sel.Epb)
+        }
+      }
+      #preparation completed
+      Date <- as.data.frame(XchangeEpbStation0[currentGroupLines,1])
+      epbStations <- cbind(Date,currentEpb);names(epbStations)[1] <- "Date"
+      USStation <- cbind(Date,currentXchange);names(USStation) <- c("Date",station)
+      #Begin tryCatch() to SPA Estimation.
+      tryCatch({
+        dfResult <- Main()
+        #fsave <- SaveResultPath
+        #write.csv(dfResult,fsave,row.names=F)
+      },error=function(e)
+      {
+        print(e)
+      })
+      RESULT <- rbind(RESULT,dfResult)
+    }else{next}
+    
+  }
+  write.csv(RESULT[-1,],SaveResultPath,row.names=F)
+}
+#}
+###SPA function
+# SPA model
+SPA <- function()
+{      
+  epbData <- epbStations[,-1]
+  USData <- USStation[,-1]
+  PMdata <- cbind(USData,epbData)
+  
+  CovValue <- cov(PMdata)
+  N <- nrow(CovValue)
+  mLeft <- matrix(nrow=N, ncol=N)
+  mLeft[1:N,1:N] <- CovValue  
+  mLeft <- rbind(mLeft, c(0,rep(1,N-1)))  # last row
+  mLeft <- cbind(mLeft, c(0,rep(1,N-1),0))# last column
+  
+  # solve a linear equation
+  param <- solve(mLeft, c(rep(0,N), 1))
+  w0 <- -param[1]
+  gi <- param[2:(N)]
+  mu <- param[N+1]
+  
+  #estimate variance
+  n <- ncol(CovValue)
+  CovepbData <- cov(epbData)
+  g <- as.matrix(gi)
+  it1 <- w0^2 * CovValue[1,1]
+  it2 <- 2*w0*sum(g*CovValue[1,c(2:n)])
+  it3 <- sum(g%*%t(g) * CovepbData)
+  v <- list(it1=it1, it2=it2, it3=it3)
+  
+  return(list(Cw0= round(w0,2),V=v))
+}
+
+Main <- function(TotalDay)
+{
+  x0 <- USStation[,2]  #value of the single station
+  
+  SPAResult <- SPA()
+  #estimated mean
+  X <- round((SPAResult$Cw0) * x0,2)
+  #variance
+  r0 <- x0/mean(x0)
+  r1 <- rowMeans(epbStations[,-1])/mean(rowMeans(epbStations[,-1]))
+  V <- r0^2*SPAResult$V$it1 - r0*r1*SPAResult$V$it2 + r1^2*SPAResult$V$it3
+  Std <- round(sqrt(V),2)
+  #confidence interval
+  CI1 <- round(X-Std,2)
+  CI2 <- round(X+Std,2)
+  
+  dfAmb <- data.frame(Date = USStation[,1],Estimation = X,w0 = SPAResult$Cw0,STDEV = Std,CI1=CI1,CI2=CI2,stringsAsFactors=F)
+  
+  return(dfAmb)
+}
+
+########################################################
