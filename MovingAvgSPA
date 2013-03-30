@@ -4,7 +4,7 @@
 #First of all, please run the SPA model code in line 70-123 around
 
 # user setting
-setwd("F:/Khaki/SPAValidation/MA.SPA")
+setwd("E:/Khaki/SYA/LREIS/Calc.SPA/MA.SPA")
 EpbStationPath <- "stationPM10_201210_12.csv"  #reference data file(PM10) 
 XchangeEpbStationPath <- "stationPM2.5_201210_12.csv"#sample data file(PM2.5)
 length <- 20 #state the length of the days in each estimation process
@@ -18,11 +18,11 @@ if (nrow(EpbStations0) != nrow(XchangeEpbStation0)){print("nrow(PM10) != nrow(PM
 #the # of groups
 groupN <- nrow(XchangeEpbStation0)-length+1; EpbStationsLines <- XchangeEpbStationLines <- groupLengthAll <- rep(0,groupN)
 for (group in 1:groupN) {
- # if (group<groupN) {
-    groupLengthAll[group] <- length
-#  }else{
-#    groupLengthAll[group] <- nrow(XchangeEpbStation0)-(group-1)*length
-#  }
+  # if (group<groupN) {
+  groupLengthAll[group] <- length
+  #  }else{
+  #    groupLengthAll[group] <- nrow(XchangeEpbStation0)-(group-1)*length
+  #  }
 }
 #Begin the loop of validation; For every PM2.5 Station, save a SPA Estimation file
 for (station in names(XchangeEpbStation0)[-1]) {
@@ -35,8 +35,7 @@ for (station in names(XchangeEpbStation0)[-1]) {
   for (group in 1:groupN) {
     currentGroupLines <- seq(group,group+length-1)
     currentXchange <- XchangeEpbStation0[currentGroupLines,station]
-    subXchangeLines <- which(currentXchange==0);currentBlankXchangeLines <- subXchangeLines+group-1
-    
+    subXchangeLines <- which(currentXchange==0);currentBlankXchangeLines <- subXchangeLines+group-1  
     if (length(subXchangeLines)!=0) {
       currentGroupLines <- setdiff(currentGroupLines,currentBlankXchangeLines)
       currentXchange <- currentXchange[-subXchangeLines]
@@ -46,11 +45,11 @@ for (station in names(XchangeEpbStation0)[-1]) {
       currentEpb <- EpbStations1[currentGroupLines,]#改到这里了
       for (Epb in names(EpbStations1)) {
         subEpbLines <- which(currentEpb[,Epb]==0)
-        currentBlankEpbLines <- subEpbLines+15*(group-1)
-        if (length(currentBlankEpbLines)>0) { #length()=x could be changed for strict or not
-          sel.Epb <- setdiff(names(currentEpb),Epb)
-          currentEpb <- subset(currentEpb,select=sel.Epb)
-        }
+        currentBlankEpbLines <- subEpbLines+group-1#What does 15 means in the previous version code?
+        #if (length(currentBlankEpbLines)>0) { #length()=x could be changed for strict or not
+        #  sel.Epb <- setdiff(names(currentEpb),Epb)
+        #  currentEpb <- subset(currentEpb,select=sel.Epb)
+        #}
       }
       #preparation completed
       Date <- as.data.frame(XchangeEpbStation0[currentGroupLines,1])
@@ -65,7 +64,7 @@ for (station in names(XchangeEpbStation0)[-1]) {
       {
         print(e)
       })
-      RESULT <- rbind(RESULT,dfResult)
+      RESULT <- rbind(RESULT,dfResult[length/2,])
     }else{next}
     
   }
@@ -95,7 +94,7 @@ SPA <- function()
   
   #estimate variance
   n <- ncol(CovValue)
-  CovepbData <- cov(epbData)
+  CovepbData <- var(epbData,na.rm=T)#Changed for Moving Average method
   g <- as.matrix(gi)
   it1 <- w0^2 * CovValue[1,1]
   it2 <- 2*w0*sum(g*CovValue[1,c(2:n)])
