@@ -38,11 +38,11 @@ for (station in names(XchangeEpbStation0)[-1]) {
     subXchangeLines <- which(currentXchange==0);currentBlankXchangeLines <- subXchangeLines+group-1  
     if (length(subXchangeLines)!=0) {
       currentGroupLines <- setdiff(currentGroupLines,currentBlankXchangeLines)
-      currentXchange <- currentXchange[-subXchangeLines]
+      currentXchange <- currentXchange[-subXchangeLines]#result of it ???
     }
     #Longer than the the PM10 Station number, to prevent the Singular Matrix 
     if (length(currentXchange)>16) { #16 is the number of the equations
-      currentEpb <- EpbStations1[currentGroupLines,]#改到这里了
+      currentEpb <- EpbStations1[currentGroupLines,]
       for (Epb in names(EpbStations1)) {
         subEpbLines <- which(currentEpb[,Epb]==0)
         currentBlankEpbLines <- subEpbLines+group-1#What does 15 means in the previous version code?
