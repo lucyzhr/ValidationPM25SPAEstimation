@@ -25,7 +25,7 @@ for (group in 1:groupN) {
   #  }
 }
 #Begin the loop of validation; For every PM2.5 Station, save a SPA Estimation file
-for (station in names(XchangeEpbStation0)[-1]) {
+for (station in names(XchangeEpbStation0)[-c(1,11)]) {
   SaveResultPath <- paste(station,"_",length,"d_result.csv",sep="")#NEW delete: "w0blnk","_",
   select <- setdiff(names(EpbStations0)[-1],station) #Delete the PM2.5 Station, in PM10 Observation matrix
   EpbStations1 <- subset(EpbStations0,select=select)
@@ -46,10 +46,10 @@ for (station in names(XchangeEpbStation0)[-1]) {
       for (Epb in names(EpbStations1)) {
         subEpbLines <- which(currentEpb[,Epb]==0)
         currentBlankEpbLines <- subEpbLines+group-1#What does 15 means in the previous version code?
-        #if (length(currentBlankEpbLines)>0) { #length()=x could be changed for strict or not
-        #  sel.Epb <- setdiff(names(currentEpb),Epb)
-        #  currentEpb <- subset(currentEpb,select=sel.Epb)
-        #}
+        if (length(currentBlankEpbLines)>as.integer(length/2)) { #length()=x could be changed for strict or not
+          sel.Epb <- setdiff(names(currentEpb),Epb)
+          currentEpb <- subset(currentEpb,select=sel.Epb)
+        }
       }
       #preparation completed
       Date <- as.data.frame(XchangeEpbStation0[currentGroupLines,1])
@@ -79,7 +79,7 @@ SPA <- function()
   USData <- USStation[,-1]
   PMdata <- cbind(USData,epbData)
   
-  CovValue <- cov(PMdata)
+  CovValue <- var(PMdata,na.rm=TRUE)
   N <- nrow(CovValue)
   mLeft <- matrix(nrow=N, ncol=N)
   mLeft[1:N,1:N] <- CovValue  
