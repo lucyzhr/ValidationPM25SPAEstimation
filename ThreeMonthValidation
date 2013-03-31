@@ -42,7 +42,7 @@ for (station in names(XchangeEpbStation0)[-1]) {
       currentEpb <- EpbStations1[currentGroupLines,]
       for (Epb in names(EpbStations1)) {
         subEpbLines <- which(currentEpb[,Epb]==0)
-        currentBlankEpbLines <- subEpbLines+15*(group-1)
+        currentBlankEpbLines <- subEpbLines+length*(group-1)#Please re-run this branch and report new result to Dr.Hu&Xu &Prof.Wang
         if (length(currentBlankEpbLines)>0) { #length()=x could be changed for strict or not
           sel.Epb <- setdiff(names(currentEpb),Epb)
           currentEpb <- subset(currentEpb,select=sel.Epb)
