@@ -7,12 +7,12 @@
 setwd("E:/Khaki/SYA/LREIS/Calc.SPA/MA.SPA")
 EpbStationPath <- "stationPM10_201210_12.csv"  #reference data file(PM10) 
 XchangeEpbStationPath <- "stationPM2.5_201210_12.csv"#sample data file(PM2.5)
-length <- 20 #state the length of the days in each estimation process
+length <- 50 #state the length of the days in each estimation process
 EpbStations0 <- read.csv(EpbStationPath)
 XchangeEpbStation0 <- read.csv(XchangeEpbStationPath)
 
 #Moving Average Set up
-####beginDate <- XchangeEpbStation0[(length/2),1]
+####beginDate <- XchangeEpbStation0[as.integer(length/2),1]
 
 if (nrow(EpbStations0) != nrow(XchangeEpbStation0)){print("nrow(PM10) != nrow(PM10)")}#待改
 #the # of groups
@@ -64,7 +64,7 @@ for (station in names(XchangeEpbStation0)[-c(1,11)]) {
       {
         print(e)
       })
-      RESULT <- rbind(RESULT,dfResult[length/2,])
+      RESULT <- rbind(RESULT,dfResult[as.integer(length/2),])
     }else{next}
     
   }
