@@ -1,0 +1,11 @@
+setwd("F:/Khaki/SPAValidation/RM.SPA")
+stationPM10 <- read.csv("V StationPM10_20100510_20121031.csv")
+db <- read.csv("V WtAvgPM10_AvgPM10_20100510_20121031.csv")
+##################################
+##Linear INtropolation############
+blankUSPM25Lines <- which(is.na(db$USPM25)==TRUE)
+USPM10.blankPM25 <- db$WtAvgPM10[blankUSPM25Lines]
+USPM25Lines <- setdiff(1:dim(db)[1],blankUSPM25Lines)
+dbWithUSPM25 <- db[USPM25Lines,]
+USPM25.lm <- lm(dbWithUSPM25$USPM25 ~ dbWithUSPM25$WtAvgPM10)
+pred1 <- predict(USPM25.lm,newdata=USPM10.blankPM25)#,interval="prediction"
