@@ -1,4 +1,6 @@
 library(ggplot2)
+library(extrafont)
+font_import()
 setwd("F:/Khaki/SPAValidation/MA.SPA")
 true <- read.csv("WtAvg.csv")
 stations <- c("atzx", "cpq","ds","dxq","fthy","gc", "gy","lx","nzg","tt","tzq","wl","wsxg","yg","yz","zwy")
@@ -11,7 +13,7 @@ keep <- c(1,2)
 # interrupt.slope <- cbind(currentStation,interrupt,slope);names(interrupt.slope) <- c("station","interrupt","slope")
 # y <- x <- 0:50
 
-station <- stations[1]
+station <- stations[10]
 currentStation <- as.data.frame(station)
 stationNames <- read.csv("stationNames.csv")
 stationName <- stationNames[1,1]
@@ -20,7 +22,7 @@ for (station in stations) {
   estimation <- read.csv(estimationPath)
   mergeFile <- merge(true, estimation[,keep],by.x="Date",by.y="Date")
   stationName <- stationNames[which(stationNames[,2]==station),1]
-  lm1 <- lm(mergeFile$WtAvg ~ mergeFile$Estimation)
+#   lm1 <- lm(mergeFile$WtAvg ~ mergeFile$Estimation)
 #     interrupt <- summary(lm1)$coeff[1,]
 #     slope <- summary(lm1)$coeff[2,]
 #     interrupt.slope <-rbind(interrupt.slope,cbind(station,interrupt,slope))
