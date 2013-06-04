@@ -1,0 +1,67 @@
+library(ggplot2)
+setwd("F:/Khaki/SPAValidation/MA.SPA")
+true <- read.csv("WtAvg.csv")
+stations <- c("atzx", "cpq","ds","dxq","fthy","gc", "gy","lx","nzg","tt","tzq","wl","wsxg","yg","yz","zwy")
+length <- 47
+Length <-paste(length,"days",sep="")
+keep <- c(1,2)
+
+# interrupt <- as.data.frame(0)
+# slope <- 0
+# interrupt.slope <- cbind(currentStation,interrupt,slope);names(interrupt.slope) <- c("station","interrupt","slope")
+# y <- x <- 0:50
+
+station <- stations[1]
+currentStation <- as.data.frame(station)
+stationNames <- read.csv("stationNames.csv")
+stationName <- stationNames[1,1]
+for (station in stations) {
+  estimationPath <- paste(station,"_",length,"d_result.csv",sep="")
+  estimation <- read.csv(estimationPath)
+  mergeFile <- merge(true, estimation[,keep],by.x="Date",by.y="Date")
+  stationName <- stationNames[which(stationNames[,2]==station),1]
+  lm1 <- lm(mergeFile$WtAvg ~ mergeFile$Estimation)
+#     interrupt <- summary(lm1)$coeff[1,]
+#     slope <- summary(lm1)$coeff[2,]
+#     interrupt.slope <-rbind(interrupt.slope,cbind(station,interrupt,slope))
+#     rltvError <- abs(mergeFile[,3]-mergeFile[,2])/mergeFile[,2]
+#     avgRltvError <- mean(rltvError) 
+#     allError[I,J] <- avgRltvError
+#     abline(lm1,col=c(sample(1:255,size=1,replace=FALSE),sample(1:255,size=1,replace=FALSE)),lwd=3,xlab="SPA Estimation",ylab="Weighted Average Estimation")
+#     library(ggplot2)
+#   #####For the text "y=ax+b,R^2=0.000" in the plot
+  lm_eqn = function(x,y,df){
+    m = lm(y ~ x, df);
+    eq <- substitute(atop(italic(y) == b %.% italic(x) + a*" " ,italic(R)^2~"="~r2), 
+                     list(a = format(coef(m)[1], digits = 2), 
+                          b = format(coef(m)[2], digits = 2), 
+                          r2 = format(summary(m)$r.squared, digits = 3)))
+    as.character(as.expression(eq));                 
+  }
+  ggplot(mergeFile,aes(x=Estimation,y=WtAvg,colour=station,Length))+theme_bw()+
+#        text in the plot
+    geom_text(aes(x = 50, y = 150, colour="black",label = lm_eqn(Estimation,WtAvg,mergeFile)),size=12, family="Times", colour="black",face="italic",parse = TRUE)+
+#         For theme without vertical gridlines
+    theme(axis.line = element_line(colour = "black"),
+          panel.grid.major.x = element_blank(),
+          panel.grid.minor = element_blank(),
+          panel.border = element_blank(),
+          panel.background = element_blank())+
+    #     scatter plot
+    geom_point(colour="darkblue", size = 4.5)+geom_smooth(method=lm,colour="black",lineheight=.8,size=1,se=F)+
+    #     range of axis
+    coord_fixed()+coord_cartesian(xlim = c(0, 240),ylim = c(0, 240))+
+    #     text of the axis
+    xlab(expression(paste("Estimated ", PM[2.5], " by SPA (",mu,"g" %.% m^-3,")")))+
+    ylab(expression(paste("True area ", PM[2.5]," (",mu,"g" %.% m^-3,")")))+ 
+    ggtitle(stationName)+
+    
+    theme(plot.title=element_text(family="Times",lineheight=.8,face="bold",size=36)
+          ,axis.title.x=element_text(family="Times",face="bold",colour="black",size=32),
+          axis.text.x=element_text(family="Times",vjust=0.5,size=28),
+          axis.title.y=element_text(family="Times",face="bold",colour="black",size=32),
+          axis.text.y=element_text(family="Times",size=28),
+          legend.position="none",
+          text=element_text(family="Times", size=28))  
+  ggsave(paste("New_",station,"_",Length,"_Real_vs_Estimation.png",sep=""), width=14.85,height=10.5, dpi=100)  
+}
